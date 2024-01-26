@@ -7,7 +7,7 @@
 #include <ew/camera.h>
 #include <ew/transform.h>
 #include <ew/cameraController.h>
-
+#include <ew/texture.h>
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
@@ -37,6 +37,14 @@ int main() {
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
+	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
+
+	//Bind brick texture to texture unit 0 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, brickTexture);
+	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
+	shader.use();
+	shader.setInt("_MainTex", 0);
 
 	
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
@@ -66,6 +74,7 @@ int main() {
 		shader.use();
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		shader.setVec3("_EyePos", camera.position);
 		monkeyModel.draw(); //Draws monkey model using current shader
 
 		drawUI();
