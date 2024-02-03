@@ -9,6 +9,8 @@
 #include <ew/cameraController.h>
 #include <ew/texture.h>
 
+#include <wr/frameBuffer.h>
+
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
