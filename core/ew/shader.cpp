@@ -101,6 +101,10 @@ namespace ew {
 	{
 		glUniform1f(glGetUniformLocation(m_id, name.c_str()), v);
 	}
+	void Shader::setFloatArray(const std::string& name, float* v, int arraySize) const
+	{
+		glUniform1fv(glGetUniformLocation(m_id, name.c_str()), arraySize, v);
+	}
 	void Shader::setVec2(const std::string& name, float x, float y) const
 	{
 		glUniform2f(glGetUniformLocation(m_id, name.c_str()), x, y);

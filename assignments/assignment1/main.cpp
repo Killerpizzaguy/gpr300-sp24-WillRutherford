@@ -40,6 +40,11 @@ struct Material {
 	float Shininess = 128;
 }material;
 
+float blurKernel[9]{
+	1.0 / 16, 2.0 / 16, 1.0 / 16,
+	2.0 / 16, 4.0 / 16, 2.0 / 16,
+	1.0 / 16, 2.0 / 16, 1.0 / 16
+};
 
 int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
@@ -93,6 +98,9 @@ int main() {
 		shader.setFloat("_Material.Ks", material.Ks);
 		shader.setFloat("_Material.Shininess", material.Shininess);
 		monkeyModel.draw(); //Draws monkey model using current shader
+
+		//frameBuffer.FBShader.setFloatArray("_Kernel", blurKernel, 9);
+		//frameBuffer.FBShader.setFloat("offset", 1.0f / 300.0f);
 
 		frameBuffer.DrawBuffer();
 		glBindTexture(GL_TEXTURE_2D, brickTexture); //temporary solution to the model's texture dissapearing after first frame

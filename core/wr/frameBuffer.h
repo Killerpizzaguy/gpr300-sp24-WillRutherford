@@ -17,10 +17,10 @@ namespace wr {
 		unsigned int depthBuffer;
 		unsigned int width;
 		unsigned int height;
+		ew::Shader FBShader = ew::Shader("assets/BufferShader.vert", "assets/KernelShader.frag");
 
 	private:
 		unsigned int bufferVAO;
-		ew::Shader FBShader = ew::Shader("assets/BufferShader.vert", "assets/BufferShader.frag");
 	};
 	//FrameBuffer makeFrameBuffer(unsigned int width, unsigned int height, int format, bool sampleDepth = false);
 	//void deleteFrameBuffer(FrameBuffer target);
