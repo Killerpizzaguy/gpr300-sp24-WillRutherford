@@ -26,6 +26,7 @@ int screenWidth = 1080;
 int screenHeight = 720;
 float prevFrameTime;
 float deltaTime;
+glm::vec3 lightPos = glm::vec3(0.0, -1.0, 0.0);
 
 ew::Camera camera;
 
@@ -97,6 +98,7 @@ int main() {
 		shader.setFloat("_Material.Kd", material.Kd);
 		shader.setFloat("_Material.Ks", material.Ks);
 		shader.setFloat("_Material.Shininess", material.Shininess);
+		shader.setVec3("_LightDirection", lightPos);
 		monkeyModel.draw(); //Draws monkey model using current shader
 
 		//frameBuffer.FBShader.setFloatArray("_Kernel", blurKernel, 9);
@@ -125,6 +127,11 @@ void drawUI() {
 		ImGui::SliderFloat("DiffuseK", &material.Kd, 0.0f, 1.0f);
 		ImGui::SliderFloat("SpecularK", &material.Ks, 0.0f, 1.0f);
 		ImGui::SliderFloat("Shininess", &material.Shininess, 2.0f, 1024.0f);
+	}
+
+	if (ImGui::CollapsingHeader("Shadows"))
+	{
+		ImGui::SliderFloat3("Light Position", &lightPos.x, -1.0f, 1.0f);
 	}
 
 	ImGui::End();
