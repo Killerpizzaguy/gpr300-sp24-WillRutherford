@@ -8,6 +8,7 @@
 #include <ew/transform.h>
 #include <ew/cameraController.h>
 #include <ew/texture.h>
+#include <ew/procGen.h>
 
 #include <wr/frameBuffer.h>
 
@@ -27,12 +28,14 @@ int screenHeight = 720;
 float prevFrameTime;
 float deltaTime;
 glm::vec3 lightPos = glm::vec3(0.0, -1.0, 0.0);
+glm::vec3 floorPos = glm::vec3(0.0, -1.0, 0.0);
 
 ew::Camera camera;
 
 ew::CameraController cameraController;
 
 ew::Transform monkeyTransform;
+ew::Transform floorTransform;
 
 struct Material {
 	float Ka = 1.0;
@@ -52,9 +55,11 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	wr::FrameBuffer frameBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_RGB);
+	wr::FrameBuffer depthBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_FLOAT, true, false, true, wr::DEPTH16);
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
+	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
 
 	//Bind brick texture to texture unit 0 
@@ -88,6 +93,8 @@ int main() {
 		cameraController.move(window, &camera, deltaTime);
 
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+		
+		floorTransform.position = floorPos;
 
 		frameBuffer.Use();
 		shader.use();
@@ -100,6 +107,8 @@ int main() {
 		shader.setFloat("_Material.Shininess", material.Shininess);
 		shader.setVec3("_LightDirection", lightPos);
 		monkeyModel.draw(); //Draws monkey model using current shader
+		shader.setMat4("_Model", floorTransform.modelMatrix());
+		planeMesh.draw();
 
 		//frameBuffer.FBShader.setFloatArray("_Kernel", blurKernel, 9);
 		//frameBuffer.FBShader.setFloat("offset", 1.0f / 300.0f);
@@ -132,6 +141,7 @@ void drawUI() {
 	if (ImGui::CollapsingHeader("Shadows"))
 	{
 		ImGui::SliderFloat3("Light Position", &lightPos.x, -1.0f, 1.0f);
+		ImGui::SliderFloat3("Floor Position", &floorPos.x, -10.0f, -1.0f);
 	}
 
 	ImGui::End();

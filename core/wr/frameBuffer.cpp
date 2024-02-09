@@ -1,7 +1,7 @@
 #include "frameBuffer.h"
 #include<iostream>
 
-wr::FrameBuffer::FrameBuffer(unsigned int width, unsigned int height, int format, bool sampleDepth)
+wr::FrameBuffer::FrameBuffer(unsigned int width, unsigned int height, int format, bool sampleDepth, bool hasColor, bool hasDepth, DepthType depthType)
 {
 	//make the frame buffer
 	//wr::FrameBuffer buffer;
@@ -9,35 +9,50 @@ wr::FrameBuffer::FrameBuffer(unsigned int width, unsigned int height, int format
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
 	//make the color buffer
-	glGenTextures(1, &colorBuffer);
-	glBindTexture(GL_TEXTURE_2D, colorBuffer);
+	if (hasColor)
+	{
+		glGenTextures(1, &colorBuffer);
+		glBindTexture(GL_TEXTURE_2D, colorBuffer);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+	}
+	else
+	{
+		colorBuffer = NULL;
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+	}
+		
 	
 	//make the depth buffer
-	if (sampleDepth) //makes a texture2D if we need to sample depth
+	if (hasDepth)
 	{
-		glGenTextures(1, &depthBuffer);
-		glBindTexture(GL_TEXTURE_2D, depthBuffer);
+		if (sampleDepth) //makes a texture2D if we need to sample depth
+		{
+			glGenTextures(1, &depthBuffer);
+			glBindTexture(GL_TEXTURE_2D, depthBuffer);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
-		glBindTexture(GL_TEXTURE_2D, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, depthType, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+			glBindTexture(GL_TEXTURE_2D, 0);
 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
+		}
+		else //Make a render buffer if we dont need to sample depth
+		{
+			glGenRenderbuffers(1, &depthBuffer);
+			glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+
+			glRenderbufferStorage(GL_RENDERBUFFER, depthType, width, height);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		}
 	}
-	else //Make a render buffer if we dont need to sample depth
-	{
-		glGenRenderbuffers(1, &depthBuffer);
-		glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
-
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	}
+	else
+		depthBuffer = NULL;
 
 	glCreateVertexArrays(1, &bufferVAO);
 
