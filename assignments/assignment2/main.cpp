@@ -55,7 +55,7 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	wr::FrameBuffer frameBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_RGB);
-	wr::FrameBuffer depthBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_FLOAT, true, false, true, wr::DEPTH16);
+	wr::FrameBuffer depthBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_FLOAT, wr::SHADOW, wr::DEPTH16);
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");

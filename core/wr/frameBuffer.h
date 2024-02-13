@@ -4,6 +4,12 @@
 #include "../ew/shader.h"
 
 namespace wr {
+	const enum BufferType
+	{
+		DEFAULT,
+		SHADOW
+	};
+	
 	const enum DepthType
 	{
 		DEPTH16 = GL_DEPTH_COMPONENT16,
@@ -14,7 +20,7 @@ namespace wr {
 
 	class FrameBuffer {
 	public:
-		FrameBuffer(unsigned int width, unsigned int height, int format, bool sampleDepth = false, bool hasColor = true, bool hasDepth = true, DepthType depthType = DEPTH24_STENCIL8);
+		FrameBuffer(unsigned int width, unsigned int height, int colorFormat, BufferType bufferType = DEFAULT, DepthType depthType = DEPTH24_STENCIL8, bool sampleDepth = false);
 		~FrameBuffer();
 		void Use();
 		void DrawBuffer();
@@ -26,7 +32,10 @@ namespace wr {
 		ew::Shader FBShader = ew::Shader("assets/BufferShader.vert", "assets/KernelShader.frag");
 
 	private:
+		void MakeDefaultBuffer(int colorFormat, bool sampleDepth, DepthType depthType);
+		void MakeShadowBuffer(int colorFormat, DepthType depthType);
 		unsigned int bufferVAO;
+		BufferType myType;
 	};
 	//FrameBuffer makeFrameBuffer(unsigned int width, unsigned int height, int format, bool sampleDepth = false);
 	//void deleteFrameBuffer(FrameBuffer target);
