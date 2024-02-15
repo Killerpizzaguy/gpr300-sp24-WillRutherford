@@ -34,6 +34,10 @@ namespace wr {
 	private:
 		void MakeDefaultBuffer(int colorFormat, bool sampleDepth, DepthType depthType);
 		void MakeShadowBuffer(int colorFormat, DepthType depthType);
+		void UseDefault();
+		void UseShadow();
+		void DrawDefault();
+		void DrawShadow();
 		unsigned int bufferVAO;
 		BufferType myType;
 	};

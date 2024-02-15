@@ -29,12 +29,13 @@ wr::FrameBuffer::FrameBuffer(unsigned int width, unsigned int height, int colorF
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
 	{
 		std::cout << "Frame Buffer Created" << std::endl;
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		
 	}
 	else
 	{
 		std::cout << "Frame Buffer Creation Failed" << std::endl;
 	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void wr::FrameBuffer::MakeDefaultBuffer(int colorFormat, bool sampleDepth, DepthType depthType)
@@ -73,17 +74,21 @@ void wr::FrameBuffer::MakeDefaultBuffer(int colorFormat, bool sampleDepth, Depth
 
 void wr::FrameBuffer::MakeShadowBuffer(int colorFormat, DepthType depthType)
 {
+	FBShader = ew::Shader("assets/ShadowBuffer.vert", "assets/ShadowBuffer.frag");
 	colorBuffer = NULL;
 
 	//make the depth buffer
 	glGenTextures(1, &depthBuffer);
 	glBindTexture(GL_TEXTURE_2D, depthBuffer);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, depthType, width, height, 0, GL_DEPTH_STENCIL, GL_DEPTH_COMPONENT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, depthType, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
@@ -99,13 +104,53 @@ wr::FrameBuffer::~FrameBuffer()
 
 void wr::FrameBuffer::Use()
 {
+	switch (myType) {
+	case DEFAULT:
+		UseDefault();
+		break;
+
+	case SHADOW:
+		break;
+		UseShadow();
+	default:
+		break;
+	}
+		
+}
+
+void wr::FrameBuffer::UseDefault()
+{
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glViewport(0, 0, width, height);
 	glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+void wr::FrameBuffer::UseShadow()
+{
+	glViewport(0, 0, width, height);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	//ConfigureShaderAndMatrices();
+	//RenderScene();
+}
+
 void wr::FrameBuffer::DrawBuffer()
+{
+	switch (myType) {
+	case DEFAULT:
+		DrawDefault();
+		break;
+
+	case SHADOW:
+		break;
+		DrawShadow();
+	default:
+		break;
+	}
+}
+
+void wr::FrameBuffer::DrawDefault()
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
@@ -118,4 +163,13 @@ void wr::FrameBuffer::DrawBuffer()
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glEnable(GL_DEPTH_TEST);
 	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void wr::FrameBuffer::DrawShadow()
+{
+	glViewport(0, 0, width, height);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	/*ConfigureShaderAndMatrices();
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	RenderScene();*/
 }
