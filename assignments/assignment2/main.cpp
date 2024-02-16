@@ -11,6 +11,7 @@
 #include <ew/procGen.h>
 
 #include <wr/frameBuffer.h>
+#include <wr/light.h>
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
@@ -30,9 +31,12 @@ float deltaTime;
 glm::vec3 lightPos = glm::vec3(0.0, -1.0, 0.0);
 glm::vec3 floorPos = glm::vec3(0.0, -1.0, 0.0);
 
+wr::FrameBuffer shadowBuffer;
+
 ew::Camera camera;
 
 ew::CameraController cameraController;
+wr::Light light;
 
 ew::Transform monkeyTransform;
 ew::Transform floorTransform;
@@ -55,7 +59,9 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	wr::FrameBuffer frameBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_RGB);
-	wr::FrameBuffer depthBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_FLOAT, wr::SHADOW, wr::DEPTH16);
+	shadowBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_FLOAT, wr::SHADOW, wr::DEPTH16);
+
+	light.lightCam.position = glm::vec3(10.0f);
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
@@ -96,9 +102,16 @@ int main() {
 		
 		floorTransform.position = floorPos;
 
-		frameBuffer.Use();
-		shader.use();
+		shadowBuffer.UseShadow(light);
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
+		monkeyModel.draw(); //Draws monkey model using current shader
+		shader.setMat4("_Model", floorTransform.modelMatrix());
+		planeMesh.draw();
+
+		
+		
+		frameBuffer.UseDefault();
+		shader.use();
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setVec3("_EyePos", camera.position);
 		shader.setFloat("_Material.Ka", material.Ka);
@@ -106,6 +119,7 @@ int main() {
 		shader.setFloat("_Material.Ks", material.Ks);
 		shader.setFloat("_Material.Shininess", material.Shininess);
 		shader.setVec3("_LightDirection", lightPos);
+		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw(); //Draws monkey model using current shader
 		shader.setMat4("_Model", floorTransform.modelMatrix());
 		planeMesh.draw();
@@ -113,7 +127,7 @@ int main() {
 		//frameBuffer.FBShader.setFloatArray("_Kernel", blurKernel, 9);
 		//frameBuffer.FBShader.setFloat("offset", 1.0f / 300.0f);
 
-		frameBuffer.DrawBuffer();
+		frameBuffer.DrawDefault();
 		glBindTexture(GL_TEXTURE_2D, brickTexture); //temporary solution to the model's texture dissapearing after first frame
 		drawUI();
 
@@ -145,6 +159,18 @@ void drawUI() {
 	}
 
 	ImGui::End();
+
+	ImGui::Begin("Shadow Map");
+	//Using a Child allow to fill all the space of the window.
+	ImGui::BeginChild("Shadow Map");
+	//Stretch image to be window size
+	ImVec2 windowSize = ImGui::GetWindowSize();
+	//Invert 0-1 V to flip vertically for ImGui display
+	//shadowMap is the texture2D handle
+	ImGui::Image((ImTextureID)shadowBuffer.depthBuffer, windowSize, ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::EndChild();
+	ImGui::End();
+
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

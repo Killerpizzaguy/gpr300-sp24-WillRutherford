@@ -2,6 +2,7 @@
 
 #include "../ew/external/glad.h"
 #include "../ew/shader.h"
+#include "light.h"
 
 namespace wr {
 	const enum BufferType
@@ -20,10 +21,14 @@ namespace wr {
 
 	class FrameBuffer {
 	public:
-		FrameBuffer(unsigned int width, unsigned int height, int colorFormat, BufferType bufferType = DEFAULT, DepthType depthType = DEPTH24_STENCIL8, bool sampleDepth = false);
+		FrameBuffer(unsigned int width = 1080, unsigned int height = 720, int colorFormat = GL_RGB, BufferType bufferType = DEFAULT, DepthType depthType = DEPTH24_STENCIL8, bool sampleDepth = false);
 		~FrameBuffer();
-		void Use();
-		void DrawBuffer();
+		//void Use();
+		void UseDefault();
+		void UseShadow(Light light);
+		//void DrawBuffer();
+		void DrawDefault();
+		void DrawShadow();
 		unsigned int fbo;
 		unsigned int colorBuffer;
 		unsigned int depthBuffer;
@@ -34,10 +39,10 @@ namespace wr {
 	private:
 		void MakeDefaultBuffer(int colorFormat, bool sampleDepth, DepthType depthType);
 		void MakeShadowBuffer(int colorFormat, DepthType depthType);
-		void UseDefault();
-		void UseShadow();
-		void DrawDefault();
-		void DrawShadow();
+		
+		
+		
+		
 		unsigned int bufferVAO;
 		BufferType myType;
 	};

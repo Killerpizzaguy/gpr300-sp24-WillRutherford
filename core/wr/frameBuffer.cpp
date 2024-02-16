@@ -102,21 +102,21 @@ wr::FrameBuffer::~FrameBuffer()
 }
 
 
-void wr::FrameBuffer::Use()
-{
-	switch (myType) {
-	case DEFAULT:
-		UseDefault();
-		break;
+//void wr::FrameBuffer::Use()
+//{
+//	switch (myType) {
+//	case DEFAULT:
+//		UseDefault();
+//		break;
+//
+//	case SHADOW:
+//		break;
+//		UseShadow();
+//	default:
+//		break;
+//	}	
+//}
 
-	case SHADOW:
-		break;
-		UseShadow();
-	default:
-		break;
-	}
-		
-}
 
 void wr::FrameBuffer::UseDefault()
 {
@@ -126,29 +126,15 @@ void wr::FrameBuffer::UseDefault()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void wr::FrameBuffer::UseShadow()
+void wr::FrameBuffer::UseShadow(Light light)
 {
 	glViewport(0, 0, width, height);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	FBShader.use();
+	FBShader.setMat4("_ViewProjection", light.lightMatrix());
 	glClear(GL_DEPTH_BUFFER_BIT);
-	//ConfigureShaderAndMatrices();
-	//RenderScene();
 }
 
-void wr::FrameBuffer::DrawBuffer()
-{
-	switch (myType) {
-	case DEFAULT:
-		DrawDefault();
-		break;
-
-	case SHADOW:
-		break;
-		DrawShadow();
-	default:
-		break;
-	}
-}
 
 void wr::FrameBuffer::DrawDefault()
 {
