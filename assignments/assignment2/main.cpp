@@ -26,12 +26,14 @@ void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 //Global state
 int screenWidth = 1080;
 int screenHeight = 720;
+const int SHADOW_WIDTH = 2048;
+const int SHADOW_HEIGHT = 2048;
 float prevFrameTime;
 float deltaTime;
 glm::vec3 lightPos = glm::vec3(0.0, -1.0, 0.0);
 glm::vec3 floorPos = glm::vec3(0.0, -1.0, 0.0);
 
-wr::FrameBuffer shadowBuffer;
+wr::FrameBuffer* shadowBuffer;
 
 ew::Camera camera;
 
@@ -59,14 +61,16 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	wr::FrameBuffer frameBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_RGB);
-	shadowBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_FLOAT, wr::SHADOW, wr::DEPTH16);
+	shadowBuffer = new wr::FrameBuffer(SHADOW_WIDTH, SHADOW_HEIGHT, GL_FLOAT, wr::SHADOW, wr::DEPTH16);
 
-	light.lightCam.position = glm::vec3(10.0f);
+	light.orthographic = true;
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
+
+	//light.initOrtho(1.0f, 7.5f, 10);
 
 	//Bind brick texture to texture unit 0 
 	glActiveTexture(GL_TEXTURE0);
@@ -80,6 +84,7 @@ int main() {
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
 	camera.aspectRatio = (float)screenWidth / screenHeight;
 	camera.fov = 60.0f; //Vertical field of view, in degrees
+	camera.orthographic = true;
 	
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
@@ -97,15 +102,20 @@ int main() {
 		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		cameraController.move(window, &camera, deltaTime);
+		//light.position = camera.position;
+		//light.target = camera.target;
 
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 		
 		floorTransform.position = floorPos;
 
-		shadowBuffer.UseShadow(light);
-		shader.setMat4("_Model", monkeyTransform.modelMatrix());
+
+
+		shadowBuffer->UseShadow(light);
+		glBindTexture(GL_TEXTURE_2D, brickTexture);
+		shadowBuffer->FBShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw(); //Draws monkey model using current shader
-		shader.setMat4("_Model", floorTransform.modelMatrix());
+		shadowBuffer->FBShader.setMat4("_Model", floorTransform.modelMatrix());
 		planeMesh.draw();
 
 		
@@ -118,7 +128,7 @@ int main() {
 		shader.setFloat("_Material.Kd", material.Kd);
 		shader.setFloat("_Material.Ks", material.Ks);
 		shader.setFloat("_Material.Shininess", material.Shininess);
-		shader.setVec3("_LightDirection", lightPos);
+		shader.setVec3("_LightDirection", light.position);
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw(); //Draws monkey model using current shader
 		shader.setMat4("_Model", floorTransform.modelMatrix());
@@ -128,7 +138,7 @@ int main() {
 		//frameBuffer.FBShader.setFloat("offset", 1.0f / 300.0f);
 
 		frameBuffer.DrawDefault();
-		glBindTexture(GL_TEXTURE_2D, brickTexture); //temporary solution to the model's texture dissapearing after first frame
+		
 		drawUI();
 
 		glfwSwapBuffers(window);
@@ -154,7 +164,8 @@ void drawUI() {
 
 	if (ImGui::CollapsingHeader("Shadows"))
 	{
-		ImGui::SliderFloat3("Light Position", &lightPos.x, -1.0f, 1.0f);
+		ImGui::SliderFloat3("Light Position", &light.position.x, -10.0f, 10.0f);
+		ImGui::SliderFloat3("Light Look Target", &light.target.x, -1.0f, 1.0f);
 		ImGui::SliderFloat3("Floor Position", &floorPos.x, -10.0f, -1.0f);
 	}
 
@@ -167,7 +178,7 @@ void drawUI() {
 	ImVec2 windowSize = ImGui::GetWindowSize();
 	//Invert 0-1 V to flip vertically for ImGui display
 	//shadowMap is the texture2D handle
-	ImGui::Image((ImTextureID)shadowBuffer.depthBuffer, windowSize, ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::Image((ImTextureID)shadowBuffer->depthBuffer, windowSize, ImVec2(0, 1), ImVec2(1, 0));
 	ImGui::EndChild();
 	ImGui::End();
 

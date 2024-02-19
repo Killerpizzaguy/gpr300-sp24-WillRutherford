@@ -1,6 +1,11 @@
 #include "frameBuffer.h"
 #include<iostream>
 
+wr::FrameBuffer::FrameBuffer()
+{
+
+}
+
 wr::FrameBuffer::FrameBuffer(unsigned int width, unsigned int height, int colorFormat, BufferType bufferType, DepthType depthType, bool sampleDepth)
 {
 	//make the frame buffer
@@ -81,7 +86,8 @@ void wr::FrameBuffer::MakeShadowBuffer(int colorFormat, DepthType depthType)
 	glGenTextures(1, &depthBuffer);
 	glBindTexture(GL_TEXTURE_2D, depthBuffer);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, depthType, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	//glTexImage2D(GL_TEXTURE_2D, 0, depthType, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -89,34 +95,17 @@ void wr::FrameBuffer::MakeShadowBuffer(int colorFormat, DepthType depthType)
 	float borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-	glBindTexture(GL_TEXTURE_2D, 0);
-
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 wr::FrameBuffer::~FrameBuffer()
 {
 	glDeleteFramebuffers(1, &fbo);
 }
-
-
-//void wr::FrameBuffer::Use()
-//{
-//	switch (myType) {
-//	case DEFAULT:
-//		UseDefault();
-//		break;
-//
-//	case SHADOW:
-//		break;
-//		UseShadow();
-//	default:
-//		break;
-//	}	
-//}
-
 
 void wr::FrameBuffer::UseDefault()
 {
@@ -128,11 +117,11 @@ void wr::FrameBuffer::UseDefault()
 
 void wr::FrameBuffer::UseShadow(Light light)
 {
-	glViewport(0, 0, width, height);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glViewport(0, 0, width, height);
+	glClear(GL_DEPTH_BUFFER_BIT);
 	FBShader.use();
 	FBShader.setMat4("_ViewProjection", light.lightMatrix());
-	glClear(GL_DEPTH_BUFFER_BIT);
 }
 
 

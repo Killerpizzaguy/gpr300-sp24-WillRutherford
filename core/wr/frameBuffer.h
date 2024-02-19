@@ -21,7 +21,8 @@ namespace wr {
 
 	class FrameBuffer {
 	public:
-		FrameBuffer(unsigned int width = 1080, unsigned int height = 720, int colorFormat = GL_RGB, BufferType bufferType = DEFAULT, DepthType depthType = DEPTH24_STENCIL8, bool sampleDepth = false);
+		FrameBuffer(unsigned int width, unsigned int height, int colorFormat = GL_RGB, BufferType bufferType = DEFAULT, DepthType depthType = DEPTH24_STENCIL8, bool sampleDepth = false);
+		FrameBuffer();
 		~FrameBuffer();
 		//void Use();
 		void UseDefault();
