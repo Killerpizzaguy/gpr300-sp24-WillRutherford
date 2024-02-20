@@ -70,7 +70,7 @@ int main() {
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
 
-	//light.initOrtho(1.0f, 7.5f, 10);
+	light.initOrtho(0.1f, 100.0f, 10);
 
 	//Bind brick texture to texture unit 0 
 	glActiveTexture(GL_TEXTURE0);
@@ -109,7 +109,7 @@ int main() {
 		
 		floorTransform.position = floorPos;
 
-
+		light.position = (light.target - light.direction) * 5.0f;
 
 		shadowBuffer->UseShadow(light);
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
@@ -128,7 +128,7 @@ int main() {
 		shader.setFloat("_Material.Kd", material.Kd);
 		shader.setFloat("_Material.Ks", material.Ks);
 		shader.setFloat("_Material.Shininess", material.Shininess);
-		shader.setVec3("_LightDirection", light.position);
+		shader.setVec3("_LightDirection", light.direction);
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw(); //Draws monkey model using current shader
 		shader.setMat4("_Model", floorTransform.modelMatrix());
@@ -164,7 +164,7 @@ void drawUI() {
 
 	if (ImGui::CollapsingHeader("Shadows"))
 	{
-		ImGui::SliderFloat3("Light Position", &light.position.x, -10.0f, 10.0f);
+		ImGui::SliderFloat3("Light Direction", &light.direction.x, -2.0f, 2.0f);
 		ImGui::SliderFloat3("Light Look Target", &light.target.x, -1.0f, 1.0f);
 		ImGui::SliderFloat3("Floor Position", &floorPos.x, -10.0f, -1.0f);
 	}

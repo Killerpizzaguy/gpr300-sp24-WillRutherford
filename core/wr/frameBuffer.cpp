@@ -98,7 +98,7 @@ void wr::FrameBuffer::MakeShadowBuffer(int colorFormat, DepthType depthType)
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
-
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
