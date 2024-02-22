@@ -15,6 +15,8 @@ uniform vec3 _LightDirection = vec3(0.0,-1.0,0.0); //straight down
 uniform vec3 _LightColor = vec3(1.0); //White light
 uniform vec3 _EyePos;
 uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
+uniform float _MinShadowBias;
+uniform float _MaxShadowBias;
 
 struct Material{
 	float Ka; //Ambient coefficient (0-1)
@@ -24,7 +26,7 @@ struct Material{
 };
 uniform Material _Material;
 
-float calcShadow(sampler2D shadowMap, vec4 lightSpacePos);
+float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias);
 void main(){
 	vec3 normal = normalize(fs_in.WorldNormal);
 
@@ -36,7 +38,8 @@ void main(){
 	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
 	
 	//Shadows
-	float shadow = calcShadow(_ShadowMap, fs_in.FragPosLightSpace); 
+	float bias = max(_MaxShadowBias * (1.0 - dot(normal,toLight)),_MinShadowBias);
+	float shadow = calcShadow(_ShadowMap, fs_in.FragPosLightSpace, bias); 
 	//vec3 lightColor = (_AmbientColor * _Material.Ka) + (_Material.Kd * diffuseFactor + _Material.Ks * specularFactor) * (1.0 - shadow);
 
 	vec3 lightColor = (_Material.Kd * diffuseFactor + _Material.Ks * specularFactor) * _LightColor;
@@ -46,11 +49,11 @@ void main(){
 	FragColor = vec4(objectColor * lightColor,1.0);
 }
 
-float calcShadow(sampler2D shadowMap, vec4 lightSpacePos)
+float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias)
 {
 	vec3 sampleCoord = lightSpacePos.xyz / lightSpacePos.w;
 	sampleCoord = sampleCoord * 0.5 + 0.5;
-	float myDepth = sampleCoord.z; 
+	float myDepth = sampleCoord.z - bias; 
 	float shadowMapDepth = texture(shadowMap, sampleCoord.xy).r;
 	
 	//step(a,b) returns 1.0 if a >= b, 0.0 otherwise
