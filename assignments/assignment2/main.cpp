@@ -71,6 +71,7 @@ int main() {
 	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
 
 	light.initOrtho(0.1f, 100.0f, 10);
+	light.position = lightPos;
 
 	//Bind brick texture to texture unit 0 
 	glActiveTexture(GL_TEXTURE0);
@@ -84,7 +85,6 @@ int main() {
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
 	camera.aspectRatio = (float)screenWidth / screenHeight;
 	camera.fov = 60.0f; //Vertical field of view, in degrees
-	camera.orthographic = true;
 	
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
@@ -109,7 +109,7 @@ int main() {
 		
 		floorTransform.position = floorPos;
 
-		light.position = (light.target - light.direction) * 5.0f;
+		light.position = light.target - light.direction * 5.0f;
 
 		shadowBuffer->UseShadow(light);
 		glBindTexture(GL_TEXTURE_2D, brickTexture);

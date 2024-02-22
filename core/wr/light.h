@@ -10,7 +10,7 @@ struct Light : ew::Camera{
 
 	inline glm::mat4 lightMatrix()
 	{
-		return viewMatrix() * projectionMatrix();
+		return  projectionMatrix() * viewMatrix();
 	}
 
 	void initOrtho(float nearPlane, float farPlane, float orthoHeight)
