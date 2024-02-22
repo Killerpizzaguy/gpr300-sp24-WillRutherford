@@ -6,7 +6,7 @@ namespace wr {
 struct Light : ew::Camera{
 	//ew::Camera lightCam;
 	glm::vec3 lightColor = glm::vec3(1.0f);
-	glm::vec3 direction = glm::vec3(0.0f, 0.0f, -1.0f);
+	glm::vec3 direction = glm::vec3(0.0f, -1.0f, 0.0f);
 
 	inline glm::mat4 lightMatrix()
 	{

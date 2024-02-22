@@ -73,6 +73,12 @@ int main() {
 	light.initOrtho(0.1f, 100.0f, 10);
 	light.position = lightPos;
 
+	//Binds the shadow map's depth buffer to texture 1
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, shadowBuffer->depthBuffer);
+	shader.use();
+	shader.setInt("_ShadowMap", 1);
+
 	//Bind brick texture to texture unit 0 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, brickTexture);
@@ -122,6 +128,7 @@ int main() {
 		
 		frameBuffer.UseDefault();
 		shader.use();
+		shader.setMat4("lightSpaceMatrix", light.lightMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setVec3("_EyePos", camera.position);
 		shader.setFloat("_Material.Ka", material.Ka);
