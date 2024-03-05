@@ -24,6 +24,9 @@ wr::FrameBuffer::FrameBuffer(unsigned int width, unsigned int height, int colorF
 	case wr::SHADOW:
 		MakeShadowBuffer(colorFormat, depthType);
 		break;
+	case wr::G_BUFFER:
+		MakeGBuffer();
+		break;
 	default:
 		break;
 	}
@@ -41,6 +44,7 @@ wr::FrameBuffer::FrameBuffer(unsigned int width, unsigned int height, int colorF
 		std::cout << "Frame Buffer Creation Failed" << std::endl;
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void wr::FrameBuffer::MakeDefaultBuffer(int colorFormat, bool sampleDepth, DepthType depthType)
@@ -102,6 +106,34 @@ void wr::FrameBuffer::MakeShadowBuffer(int colorFormat, DepthType depthType)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void wr::FrameBuffer::MakeGBuffer()
+{
+
+	for (size_t i = 0; i < 3; i++)
+	{
+		glGenTextures(1, &colorBuffers[i]);
+		glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
+		glTexStorage2D(GL_TEXTURE_2D, 1, G_BUFFER_FORMATS[i], width, height);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, colorBuffers[i], 0);
+	}
+	glDrawBuffers(3, drawBuffers);
+
+	//Depth Texture
+	glGenTextures(1, &depthBuffer);
+	glBindTexture(GL_TEXTURE_2D, depthBuffer);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, DEPTH24, width, height, 0, GL_DEPTH_STENCIL, DEPTH24, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
+}
+
 wr::FrameBuffer::~FrameBuffer()
 {
 	glDeleteFramebuffers(1, &fbo);
@@ -124,6 +156,10 @@ void wr::FrameBuffer::UseShadow(Light light)
 	FBShader.setMat4("_ViewProjection", light.lightMatrix());
 }
 
+void wr::FrameBuffer::UseGBuffer()
+{
+
+}
 
 void wr::FrameBuffer::DrawDefault()
 {
@@ -147,4 +183,9 @@ void wr::FrameBuffer::DrawShadow()
 	/*ConfigureShaderAndMatrices();
 	glBindTexture(GL_TEXTURE_2D, depthMap);
 	RenderScene();*/
+}
+
+void wr::FrameBuffer::DrawGBuffer()
+{
+
 }

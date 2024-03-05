@@ -8,7 +8,8 @@ namespace wr {
 	const enum BufferType
 	{
 		DEFAULT,
-		SHADOW
+		SHADOW,
+		G_BUFFER
 	};
 	
 	const enum DepthType
@@ -27,11 +28,14 @@ namespace wr {
 		//void Use();
 		void UseDefault();
 		void UseShadow(Light light);
+		void UseGBuffer();
 		//void DrawBuffer();
 		void DrawDefault();
 		void DrawShadow();
+		void DrawGBuffer();
 		unsigned int fbo;
 		unsigned int colorBuffer;
+		unsigned int colorBuffers[3];
 		unsigned int depthBuffer;
 		unsigned int width;
 		unsigned int height;
@@ -40,9 +44,21 @@ namespace wr {
 	private:
 		void MakeDefaultBuffer(int colorFormat, bool sampleDepth, DepthType depthType);
 		void MakeShadowBuffer(int colorFormat, DepthType depthType);
+		void MakeGBuffer();
 		
-		
-		
+		const int G_BUFFER_FORMATS[3] =
+		{
+			GL_RGB32F,
+			GL_RGB16F,
+			GL_RGB16F
+		};
+		const GLenum drawBuffers[3] = 
+		{
+			GL_COLOR_ATTACHMENT0, 
+			GL_COLOR_ATTACHMENT1, 
+			GL_COLOR_ATTACHMENT2
+		};
+
 		
 		unsigned int bufferVAO;
 		BufferType myType;
