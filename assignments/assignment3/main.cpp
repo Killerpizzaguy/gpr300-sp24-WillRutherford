@@ -37,6 +37,7 @@ float maxShadowBias = 0.015;
 float minShadowBias = 0.005;
 
 wr::FrameBuffer* shadowBuffer;
+wr::FrameBuffer* gBuffer;
 
 ew::Camera camera;
 
@@ -65,6 +66,7 @@ int main() {
 
 	wr::FrameBuffer frameBuffer = wr::FrameBuffer(screenWidth, screenHeight, GL_RGB);
 	shadowBuffer = new wr::FrameBuffer(SHADOW_WIDTH, SHADOW_HEIGHT, GL_FLOAT, wr::SHADOW, wr::DEPTH16);
+	gBuffer = new wr::FrameBuffer(screenWidth, screenHeight, GL_RGB, wr::G_BUFFER);
 
 	light.orthographic = true;
 
