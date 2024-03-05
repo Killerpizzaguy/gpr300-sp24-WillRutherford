@@ -108,7 +108,7 @@ void wr::FrameBuffer::MakeShadowBuffer(int colorFormat, DepthType depthType)
 
 void wr::FrameBuffer::MakeGBuffer()
 {
-
+	FBShader = ew::Shader("assets/lit.vert", "assets/geoPass.frag");
 	for (size_t i = 0; i < 3; i++)
 	{
 		glGenTextures(1, &colorBuffers[i]);
