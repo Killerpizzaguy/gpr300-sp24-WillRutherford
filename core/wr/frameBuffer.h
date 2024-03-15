@@ -40,6 +40,12 @@ namespace wr {
 		unsigned int width;
 		unsigned int height;
 		ew::Shader FBShader = ew::Shader("assets/BufferShader.vert", "assets/KernelShader.frag");
+		const GLenum drawBuffers[3] = 
+		{
+			GL_COLOR_ATTACHMENT0, 
+			GL_COLOR_ATTACHMENT1, 
+			GL_COLOR_ATTACHMENT2
+		};
 
 	private:
 		void MakeDefaultBuffer(int colorFormat, bool sampleDepth, DepthType depthType);
@@ -52,12 +58,7 @@ namespace wr {
 			GL_RGB16F,
 			GL_RGB16F
 		};
-		const GLenum drawBuffers[3] = 
-		{
-			GL_COLOR_ATTACHMENT0, 
-			GL_COLOR_ATTACHMENT1, 
-			GL_COLOR_ATTACHMENT2
-		};
+		
 
 		
 		unsigned int bufferVAO;

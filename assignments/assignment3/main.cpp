@@ -23,6 +23,7 @@ GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
 void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 void drawScene(ew::Shader shader);
+void drawScene(ew::Shader shader, int count);
 
 //Global state
 int screenWidth = 1920;
@@ -74,7 +75,7 @@ int main() {
 
 	light.orthographic = true;
 
-	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
+	ew::Shader shader = ew::Shader("assets/BufferShader.vert", "assets/deferredLit.frag");
 	monkeyModel = new ew::Model("assets/suzanne.obj");
 	planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
@@ -129,16 +130,21 @@ int main() {
 		gBuffer->UseGBuffer();
 		gBuffer->FBShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		drawScene(gBuffer->FBShader);
+		drawScene(gBuffer->FBShader, 8);
 
 		shadowBuffer->UseShadow(light);
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		drawScene(shadowBuffer->FBShader);
+		drawScene(shadowBuffer->FBShader, 8);
 
 		
 		
 		frameBuffer.UseDefault();
 		shader.use();
+		int colorBufferCount = std::size(gBuffer->colorBuffers);
+		for (int i = 0; i < colorBufferCount; i++)
+		{
+			glBindTextureUnit(i, gBuffer->colorBuffers[i]);
+		}
 		shader.setMat4("lightSpaceMatrix", light.lightMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setVec3("_EyePos", camera.position);
@@ -153,7 +159,7 @@ int main() {
 		//monkeyModel.draw(); //Draws monkey model using current shader
 		//shader.setMat4("_Model", floorTransform.modelMatrix());
 		//planeMesh.draw();
-		drawScene(shader);
+		drawScene(shader, 8);
 
 		//frameBuffer.FBShader.setFloatArray("_Kernel", blurKernel, 9);
 		//frameBuffer.FBShader.setFloat("offset", 1.0f / 300.0f);
@@ -169,10 +175,34 @@ int main() {
 
 void drawScene(ew::Shader shader)
 {
-	shader.setMat4("_Model", monkeyTransform.modelMatrix());
-	monkeyModel->draw(); //Draws monkey model using current shader
-	shader.setMat4("_Model", floorTransform.modelMatrix());
-	planeMesh.draw();
+			shader.setMat4("_Model", floorTransform.modelMatrix());
+			planeMesh.draw();
+			shader.setMat4("_Model", monkeyTransform.modelMatrix());
+			monkeyModel->draw(); //Draws monkey model using current shader
+}
+
+void drawScene(ew::Shader shader, int count)
+{
+	count = (count / 2) * 10;
+	ew::Transform mTrans = monkeyTransform;
+	ew::Transform fTrans = floorTransform;
+	for (int i = -count; i < count; i += 10)
+	{
+		mTrans.position.x = i;
+		fTrans.position.x = i;
+
+		for (int j = -count; j < count; j += 10)
+		{
+			mTrans.position.z = j;
+			fTrans.position.z = j;
+			shader.setMat4("_Model", fTrans.modelMatrix());
+			planeMesh.draw();
+			shader.setMat4("_Model", mTrans.modelMatrix());
+			monkeyModel->draw(); //Draws monkey model using current shader
+		}
+	}
+	//shader.setMat4("_Model", monkeyTransform.modelMatrix());
+	//monkeyModel->draw(); //Draws monkey model using current shader
 }
 
 void drawUI() {
