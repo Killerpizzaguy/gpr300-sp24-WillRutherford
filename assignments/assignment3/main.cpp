@@ -18,12 +18,15 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <iostream>
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
 void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 void drawScene(ew::Shader shader);
 void drawScene(ew::Shader shader, int count);
+void initPointLights(float radius);
 
 //Global state
 int screenWidth = 1920;
@@ -48,9 +51,13 @@ wr::Light light;
 
 ew::Model* monkeyModel;
 ew::Mesh planeMesh;
+const int MONKEY_SQUARE_COUNT = 8;
 
 ew::Transform monkeyTransform;
 ew::Transform floorTransform;
+
+const int LIGHT_COUNT = 64;
+wr::PointLight PointLights[LIGHT_COUNT];
 
 struct Material {
 	float Ka = 1.0;
@@ -83,6 +90,8 @@ int main() {
 	light.initOrtho(0.1f, 100.0f, 10);
 	light.position = lightPos;
 
+	initPointLights(7);
+
 	//Binds the shadow map's depth buffer to texture 1
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, shadowBuffer->depthBuffer);
@@ -96,6 +105,8 @@ int main() {
 	shader.use();
 	shader.setInt("_MainTex", 0);
 
+	unsigned int dummyVAO;
+	glCreateVertexArrays(1, &dummyVAO);
 	
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
@@ -130,11 +141,11 @@ int main() {
 		gBuffer->UseGBuffer();
 		gBuffer->FBShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		drawScene(gBuffer->FBShader, 8);
+		drawScene(gBuffer->FBShader, MONKEY_SQUARE_COUNT);
 
 		shadowBuffer->UseShadow(light);
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		drawScene(shadowBuffer->FBShader, 8);
+		drawScene(shadowBuffer->FBShader, MONKEY_SQUARE_COUNT);
 
 		
 		
@@ -155,11 +166,18 @@ int main() {
 		shader.setFloat("_MaxShadowBias", maxShadowBias);
 		shader.setFloat("_MinShadowBias", minShadowBias);
 		shader.setVec3("_LightDirection", light.direction);
-		//shader.setMat4("_Model", monkeyTransform.modelMatrix());
-		//monkeyModel.draw(); //Draws monkey model using current shader
-		//shader.setMat4("_Model", floorTransform.modelMatrix());
-		//planeMesh.draw();
-		drawScene(shader, 8);
+
+		for (int i = 0; i < LIGHT_COUNT; i++) {
+			//Creates prefix "_PointLights[0]." etc
+			std::string prefix = "_PointLights[" + std::to_string(i) + "].";
+			shader.setVec3(prefix + "position", PointLights[i].position);
+			shader.setFloat(prefix + "radius", PointLights[i].radius);
+			shader.setVec3(prefix + "color", PointLights[i].color);
+		}
+
+
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		//frameBuffer.FBShader.setFloatArray("_Kernel", blurKernel, 9);
 		//frameBuffer.FBShader.setFloat("offset", 1.0f / 300.0f);
@@ -302,4 +320,46 @@ void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
 	camera->position = glm::vec3(0, 0, 5.0f);
 	camera->target = glm::vec3(0);
 	controller->yaw = controller->pitch = 0;
+}
+
+void initPointLights(float radius) 
+{
+	glm::vec3 pointPos = glm::vec3((MONKEY_SQUARE_COUNT / 2) * -10, 3, (MONKEY_SQUARE_COUNT / 2) * -10);
+	for (int i = 0; i < LIGHT_COUNT; i++)
+	{
+		switch (i % (COLOR_PRESET_COUNT))
+		{
+		case 0:
+			PointLights[i].color = RED;
+			break;
+		case 1:
+			PointLights[i].color = ORANGE;
+			break;
+		case 2:
+			PointLights[i].color = YELLOW;
+			break;
+		case 3:
+			PointLights[i].color = GREEN;
+			break;
+		case 4:
+			PointLights[i].color = BLUE;
+			break;
+		case 5:
+			PointLights[i].color = PURPLE;
+			break;
+
+		default:
+			PointLights[i].color = RED;
+			break;
+		}
+
+		PointLights[i].position = pointPos;
+		pointPos.z += 10;
+		if (i % MONKEY_SQUARE_COUNT == 0 && i != 0)
+		{
+			pointPos.x += 10;
+			pointPos.z = (MONKEY_SQUARE_COUNT / 2) * -10;
+		}
+		PointLights[i].radius = radius;
+	}
 }
