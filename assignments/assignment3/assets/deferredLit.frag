@@ -22,7 +22,13 @@ struct PointLight{
 	vec3 color;
 };
 #define MAX_POINT_LIGHTS 64
-uniform PointLight _PointLights[MAX_POINT_LIGHTS];
+
+//Anything passed into a std140 layout must have vectors that line up in chunks of 16 bytes
+//A float has 4 bytes and a vec4 has 16
+layout (std140, binding=0) uniform AdditionalLights{ 
+	PointLight _PointLights[MAX_POINT_LIGHTS];
+};
+
 
 
 struct Material{

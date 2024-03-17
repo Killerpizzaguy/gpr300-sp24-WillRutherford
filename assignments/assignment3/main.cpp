@@ -28,6 +28,7 @@ void drawScene(ew::Shader shader);
 void drawScene(ew::Shader shader, int count);
 void initPointLights(float radius);
 void drawLightOrbs(ew::Shader lightShader, wr::FrameBuffer& frameBuffer, float radius);
+void makeUBO(unsigned int& ubo, void* arrayAddress, unsigned int size, int binding);
 
 //Global state
 int screenWidth = 1920;
@@ -95,6 +96,8 @@ int main() {
 	light.position = lightPos;
 
 	initPointLights(7);
+	unsigned int lightUBO;
+	makeUBO(lightUBO, PointLights, sizeof(PointLights), 0);
 
 	//Binds the shadow map's depth buffer to texture 1
 	glActiveTexture(GL_TEXTURE1);
@@ -171,13 +174,13 @@ int main() {
 		shader.setFloat("_MinShadowBias", minShadowBias);
 		shader.setVec3("_LightDirection", light.direction);
 
-		for (int i = 0; i < LIGHT_COUNT; i++) {
-			//Creates prefix "_PointLights[0]." etc
-			std::string prefix = "_PointLights[" + std::to_string(i) + "].";
-			shader.setVec3(prefix + "position", PointLights[i].position);
-			shader.setFloat(prefix + "radius", PointLights[i].radius);
-			shader.setVec3(prefix + "color", PointLights[i].color);
-		}
+		//for (int i = 0; i < LIGHT_COUNT; i++) {
+		//	//Creates prefix "_PointLights[0]." etc
+		//	std::string prefix = "_PointLights[" + std::to_string(i) + "].";
+		//	shader.setVec3(prefix + "position", PointLights[i].position);
+		//	shader.setFloat(prefix + "radius", PointLights[i].radius);
+		//	shader.setVec3(prefix + "color", PointLights[i].color);
+		//}
 
 
 		glBindVertexArray(dummyVAO);
@@ -333,26 +336,26 @@ void initPointLights(float radius)
 		switch (i % (COLOR_PRESET_COUNT))
 		{
 		case 0:
-			PointLights[i].color = RED;
+			PointLights[i].color = glm::vec4(RED, 1.0f);
 			break;
 		case 1:
-			PointLights[i].color = ORANGE;
+			PointLights[i].color = glm::vec4(ORANGE, 1.0f);
 			break;
 		case 2:
-			PointLights[i].color = YELLOW;
+			PointLights[i].color = glm::vec4(YELLOW, 1.0f);
 			break;
 		case 3:
-			PointLights[i].color = GREEN;
+			PointLights[i].color = glm::vec4(GREEN, 1.0f);
 			break;
 		case 4:
-			PointLights[i].color = BLUE;
+			PointLights[i].color = glm::vec4(BLUE, 1.0f);
 			break;
 		case 5:
-			PointLights[i].color = PURPLE;
+			PointLights[i].color = glm::vec4(PURPLE, 1.0f);
 			break;
 
 		default:
-			PointLights[i].color = RED;
+			PointLights[i].color = glm::vec4(RED, 1.0f);;
 			break;
 		}
 
@@ -387,4 +390,16 @@ void drawLightOrbs(ew::Shader lightShader, wr::FrameBuffer& frameBuffer, float r
 		lightShader.setVec3("_Color", PointLights[i].color);
 		sphereMesh.draw();
 	}
+}
+
+void makeUBO(unsigned int& ubo, void* arrayAddress, unsigned int size, int binding)
+{
+	glGenBuffers(1, &ubo);
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+
+	glBufferData(GL_UNIFORM_BUFFER, size, arrayAddress, GL_DYNAMIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, binding, ubo);
+
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }

@@ -36,6 +36,6 @@ namespace wr {
 
 		glm::vec3 position;
 		float radius;
-		glm::vec3 color;
+		glm::vec4 color;
 	};
 }
