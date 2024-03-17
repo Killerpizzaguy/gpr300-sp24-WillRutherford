@@ -21,7 +21,7 @@ struct PointLight{
 	float radius;
 	vec3 color;
 };
-#define MAX_POINT_LIGHTS 64
+#define MAX_POINT_LIGHTS 256
 
 //Anything passed into a std140 layout must have vectors that line up in chunks of 16 bytes
 //A float has 4 bytes and a vec4 has 16
@@ -43,8 +43,6 @@ uniform Material _Material;
 //    vec3 Position;
 //    vec3 Color;
 //};
-//const int LIGHT_COUNT = 64;
-//uniform Light lights[LIGHT_COUNT];
 
 float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias);
 vec3 calcPointLight(PointLight light,vec3 normal,vec3 pos);

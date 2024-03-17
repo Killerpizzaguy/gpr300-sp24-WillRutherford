@@ -58,7 +58,7 @@ const int MONKEY_SQUARE_COUNT = 8;
 ew::Transform monkeyTransform;
 ew::Transform floorTransform;
 
-const int LIGHT_COUNT = 64;
+const int LIGHT_COUNT = 256;
 wr::PointLight PointLights[LIGHT_COUNT];
 ew::Mesh sphereMesh;
 
@@ -360,10 +360,10 @@ void initPointLights(float radius)
 		}
 
 		PointLights[i].position = pointPos;
-		pointPos.z += 10;
-		if (i % MONKEY_SQUARE_COUNT == 0 && i != 0)
+		pointPos.z += 5;
+		if (i % (MONKEY_SQUARE_COUNT*2) == 0 && i != 0)
 		{
-			pointPos.x += 10;
+			pointPos.x += 5;
 			pointPos.z = (MONKEY_SQUARE_COUNT / 2) * -10;
 		}
 		PointLights[i].radius = radius;
