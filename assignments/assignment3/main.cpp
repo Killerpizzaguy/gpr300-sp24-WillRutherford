@@ -27,6 +27,7 @@ void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 void drawScene(ew::Shader shader);
 void drawScene(ew::Shader shader, int count);
 void initPointLights(float radius);
+void drawLightOrbs(ew::Shader lightShader, wr::FrameBuffer& frameBuffer, float radius);
 
 //Global state
 int screenWidth = 1920;
@@ -58,6 +59,7 @@ ew::Transform floorTransform;
 
 const int LIGHT_COUNT = 64;
 wr::PointLight PointLights[LIGHT_COUNT];
+ew::Mesh sphereMesh;
 
 struct Material {
 	float Ka = 1.0;
@@ -83,8 +85,10 @@ int main() {
 	light.orthographic = true;
 
 	ew::Shader shader = ew::Shader("assets/BufferShader.vert", "assets/deferredLit.frag");
+	ew::Shader lightOrbShader = ew::Shader("assets/lightOrb.vert", "assets/lightOrb.frag");
 	monkeyModel = new ew::Model("assets/suzanne.obj");
 	planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
+	sphereMesh = ew::Mesh(ew::createSphere(1.0f, 8));
 	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
 
 	light.initOrtho(0.1f, 100.0f, 10);
@@ -179,8 +183,7 @@ int main() {
 		glBindVertexArray(dummyVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
-		//frameBuffer.FBShader.setFloatArray("_Kernel", blurKernel, 9);
-		//frameBuffer.FBShader.setFloat("offset", 1.0f / 300.0f);
+		drawLightOrbs(lightOrbShader, frameBuffer, 0.25f);
 
 		frameBuffer.DrawDefault();
 		
@@ -361,5 +364,27 @@ void initPointLights(float radius)
 			pointPos.z = (MONKEY_SQUARE_COUNT / 2) * -10;
 		}
 		PointLights[i].radius = radius;
+	}
+}
+
+void drawLightOrbs(ew::Shader lightShader, wr::FrameBuffer& frameBuffer, float radius)
+{
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer->fbo); //Read from gBuffer 
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer.fbo); //Write to current fbo
+	glBlitFramebuffer(0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+	lightShader.use();
+	lightShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+
+
+	for (int i = 0; i < LIGHT_COUNT; i++)
+	{
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, PointLights[i].position);
+		model = glm::scale(model, glm::vec3(radius));
+
+		lightShader.setMat4("_Model", model);
+		lightShader.setVec3("_Color", PointLights[i].color);
+		sphereMesh.draw();
 	}
 }
