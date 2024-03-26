@@ -18,14 +18,21 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <iostream>
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
 void resetCamera(ew::Camera* camera, ew::CameraController* controller);
+void drawScene(ew::Shader shader);
+void drawScene(ew::Shader shader, int count);
+void initPointLights(float radius);
+void drawLightOrbs(ew::Shader lightShader, wr::FrameBuffer& frameBuffer, float radius);
+void makeUBO(unsigned int& ubo, void* arrayAddress, unsigned int size, int binding);
 
 //Global state
-int screenWidth = 1080;
-int screenHeight = 720;
+int screenWidth = 1920;
+int screenHeight = 1080;
 const int SHADOW_WIDTH = 2048;
 const int SHADOW_HEIGHT = 2048;
 float prevFrameTime;
@@ -44,8 +51,16 @@ ew::Camera camera;
 ew::CameraController cameraController;
 wr::Light light;
 
+ew::Model* monkeyModel;
+ew::Mesh planeMesh;
+const int MONKEY_SQUARE_COUNT = 8;
+
 ew::Transform monkeyTransform;
 ew::Transform floorTransform;
+
+const int LIGHT_COUNT = 256;
+wr::PointLight PointLights[LIGHT_COUNT];
+ew::Mesh sphereMesh;
 
 struct Material {
 	float Ka = 1.0;
@@ -70,13 +85,19 @@ int main() {
 
 	light.orthographic = true;
 
-	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
-	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
-	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
+	ew::Shader shader = ew::Shader("assets/BufferShader.vert", "assets/deferredLit.frag");
+	ew::Shader lightOrbShader = ew::Shader("assets/lightOrb.vert", "assets/lightOrb.frag");
+	monkeyModel = new ew::Model("assets/suzanne.obj");
+	planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
+	sphereMesh = ew::Mesh(ew::createSphere(1.0f, 8));
 	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
 
 	light.initOrtho(0.1f, 100.0f, 10);
 	light.position = lightPos;
+
+	initPointLights(7);
+	unsigned int lightUBO;
+	makeUBO(lightUBO, PointLights, sizeof(PointLights), 0);
 
 	//Binds the shadow map's depth buffer to texture 1
 	glActiveTexture(GL_TEXTURE1);
@@ -91,6 +112,8 @@ int main() {
 	shader.use();
 	shader.setInt("_MainTex", 0);
 
+	unsigned int dummyVAO;
+	glCreateVertexArrays(1, &dummyVAO);
 	
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
@@ -122,17 +145,24 @@ int main() {
 
 		light.position = light.target - light.direction * 5.0f;
 
+		gBuffer->UseGBuffer();
+		gBuffer->FBShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		glBindTexture(GL_TEXTURE_2D, brickTexture);
+		drawScene(gBuffer->FBShader, MONKEY_SQUARE_COUNT);
+
 		shadowBuffer->UseShadow(light);
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		shadowBuffer->FBShader.setMat4("_Model", monkeyTransform.modelMatrix());
-		monkeyModel.draw(); //Draws monkey model using current shader
-		shadowBuffer->FBShader.setMat4("_Model", floorTransform.modelMatrix());
-		planeMesh.draw();
+		drawScene(shadowBuffer->FBShader, MONKEY_SQUARE_COUNT);
 
 		
 		
 		frameBuffer.UseDefault();
 		shader.use();
+		int colorBufferCount = std::size(gBuffer->colorBuffers);
+		for (int i = 0; i < colorBufferCount; i++)
+		{
+			glBindTextureUnit(i, gBuffer->colorBuffers[i]);
+		}
 		shader.setMat4("lightSpaceMatrix", light.lightMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setVec3("_EyePos", camera.position);
@@ -143,13 +173,20 @@ int main() {
 		shader.setFloat("_MaxShadowBias", maxShadowBias);
 		shader.setFloat("_MinShadowBias", minShadowBias);
 		shader.setVec3("_LightDirection", light.direction);
-		shader.setMat4("_Model", monkeyTransform.modelMatrix());
-		monkeyModel.draw(); //Draws monkey model using current shader
-		shader.setMat4("_Model", floorTransform.modelMatrix());
-		planeMesh.draw();
 
-		//frameBuffer.FBShader.setFloatArray("_Kernel", blurKernel, 9);
-		//frameBuffer.FBShader.setFloat("offset", 1.0f / 300.0f);
+		//for (int i = 0; i < LIGHT_COUNT; i++) {
+		//	//Creates prefix "_PointLights[0]." etc
+		//	std::string prefix = "_PointLights[" + std::to_string(i) + "].";
+		//	shader.setVec3(prefix + "position", PointLights[i].position);
+		//	shader.setFloat(prefix + "radius", PointLights[i].radius);
+		//	shader.setVec3(prefix + "color", PointLights[i].color);
+		//}
+
+
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		drawLightOrbs(lightOrbShader, frameBuffer, 0.25f);
 
 		frameBuffer.DrawDefault();
 		
@@ -158,6 +195,38 @@ int main() {
 		glfwSwapBuffers(window);
 	}
 	printf("Shutting down...");
+}
+
+void drawScene(ew::Shader shader)
+{
+			shader.setMat4("_Model", floorTransform.modelMatrix());
+			planeMesh.draw();
+			shader.setMat4("_Model", monkeyTransform.modelMatrix());
+			monkeyModel->draw(); //Draws monkey model using current shader
+}
+
+void drawScene(ew::Shader shader, int count)
+{
+	count = (count / 2) * 10;
+	ew::Transform mTrans = monkeyTransform;
+	ew::Transform fTrans = floorTransform;
+	for (int i = -count; i < count; i += 10)
+	{
+		mTrans.position.x = i;
+		fTrans.position.x = i;
+
+		for (int j = -count; j < count; j += 10)
+		{
+			mTrans.position.z = j;
+			fTrans.position.z = j;
+			shader.setMat4("_Model", fTrans.modelMatrix());
+			planeMesh.draw();
+			shader.setMat4("_Model", mTrans.modelMatrix());
+			monkeyModel->draw(); //Draws monkey model using current shader
+		}
+	}
+	//shader.setMat4("_Model", monkeyTransform.modelMatrix());
+	//monkeyModel->draw(); //Draws monkey model using current shader
 }
 
 void drawUI() {
@@ -198,6 +267,14 @@ void drawUI() {
 	ImGui::EndChild();
 	ImGui::End();
 
+	ImGui::Begin("GBuffers"); 
+		ImVec2 texSize = ImVec2(gBuffer->width / 4, gBuffer->height / 4);
+		for (size_t i = 0; i < 3; i++)
+		{
+			ImGui::Image((ImTextureID)gBuffer->colorBuffers[i], texSize, ImVec2(0, 1), ImVec2(1, 0));
+		}
+		ImGui::End();
+	
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -249,4 +326,80 @@ void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
 	camera->position = glm::vec3(0, 0, 5.0f);
 	camera->target = glm::vec3(0);
 	controller->yaw = controller->pitch = 0;
+}
+
+void initPointLights(float radius) 
+{
+	glm::vec3 pointPos = glm::vec3((MONKEY_SQUARE_COUNT / 2) * -10, 3, (MONKEY_SQUARE_COUNT / 2) * -10);
+	for (int i = 0; i < LIGHT_COUNT; i++)
+	{
+		switch (i % (COLOR_PRESET_COUNT))
+		{
+		case 0:
+			PointLights[i].color = glm::vec4(RED, 1.0f);
+			break;
+		case 1:
+			PointLights[i].color = glm::vec4(ORANGE, 1.0f);
+			break;
+		case 2:
+			PointLights[i].color = glm::vec4(YELLOW, 1.0f);
+			break;
+		case 3:
+			PointLights[i].color = glm::vec4(GREEN, 1.0f);
+			break;
+		case 4:
+			PointLights[i].color = glm::vec4(BLUE, 1.0f);
+			break;
+		case 5:
+			PointLights[i].color = glm::vec4(PURPLE, 1.0f);
+			break;
+
+		default:
+			PointLights[i].color = glm::vec4(RED, 1.0f);;
+			break;
+		}
+
+		PointLights[i].position = pointPos;
+		pointPos.z += 5;
+		if (i % (MONKEY_SQUARE_COUNT*2) == 0 && i != 0)
+		{
+			pointPos.x += 5;
+			pointPos.z = (MONKEY_SQUARE_COUNT / 2) * -10;
+		}
+		PointLights[i].radius = radius;
+	}
+}
+
+void drawLightOrbs(ew::Shader lightShader, wr::FrameBuffer& frameBuffer, float radius)
+{
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer->fbo); //Read from gBuffer 
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer.fbo); //Write to current fbo
+	glBlitFramebuffer(0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+	lightShader.use();
+	lightShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+
+
+	for (int i = 0; i < LIGHT_COUNT; i++)
+	{
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, PointLights[i].position);
+		model = glm::scale(model, glm::vec3(radius));
+
+		lightShader.setMat4("_Model", model);
+		lightShader.setVec3("_Color", PointLights[i].color);
+		sphereMesh.draw();
+	}
+}
+
+void makeUBO(unsigned int& ubo, void* arrayAddress, unsigned int size, int binding)
+{
+	glGenBuffers(1, &ubo);
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+
+	glBufferData(GL_UNIFORM_BUFFER, size, arrayAddress, GL_DYNAMIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, binding, ubo);
+
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }

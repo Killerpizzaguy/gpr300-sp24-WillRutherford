@@ -108,7 +108,7 @@ void wr::FrameBuffer::MakeShadowBuffer(int colorFormat, DepthType depthType)
 
 void wr::FrameBuffer::MakeGBuffer()
 {
-	FBShader = ew::Shader("assets/lit.vert", "assets/geoPass.frag");
+	FBShader = ew::Shader("assets/geoPass.vert", "assets/geoPass.frag");
 	for (size_t i = 0; i < 3; i++)
 	{
 		glGenTextures(1, &colorBuffers[i]);
@@ -128,10 +128,14 @@ void wr::FrameBuffer::MakeGBuffer()
 	glGenTextures(1, &depthBuffer);
 	glBindTexture(GL_TEXTURE_2D, depthBuffer);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, DEPTH24, width, height, 0, GL_DEPTH_STENCIL, DEPTH24, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
 }
 
 wr::FrameBuffer::~FrameBuffer()
@@ -147,6 +151,7 @@ void wr::FrameBuffer::UseDefault()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+
 void wr::FrameBuffer::UseShadow(Light light)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -158,7 +163,12 @@ void wr::FrameBuffer::UseShadow(Light light)
 
 void wr::FrameBuffer::UseGBuffer()
 {
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glViewport(0, 0, width, height);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	FBShader.use();
 }
 
 void wr::FrameBuffer::DrawDefault()
