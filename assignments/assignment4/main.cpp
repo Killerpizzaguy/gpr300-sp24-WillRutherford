@@ -30,7 +30,6 @@ void drawScene(ew::Shader shader, int count);
 void initPointLights(float radius);
 void drawLightOrbs(ew::Shader lightShader, wr::FrameBuffer& frameBuffer, float radius);
 void makeUBO(unsigned int& ubo, void* arrayAddress, unsigned int size, int binding);
-glm::vec3 orbit(glm::vec3 center, float r, float angle);
 glm::vec3 orbitOffset(float r, float angle);
 
 //Global state
@@ -165,15 +164,12 @@ int main() {
 			monkeyOrbitAngle -= 360;
 
 		
-		//monkeyTransform.position += orbitOffset(MONKEY_FLIGHT_RADIUS, monkeyOrbitAngle);
-		/*monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));*/
-		//monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, glm::radians(-80 * deltaTime), glm::vec3(0.0, 1.0, 0.0));
 		monkeyTransform.rotation = glm::rotate(
 			glm::quatLookAt(glm::normalize(orbitOffset(MONKEY_FLIGHT_RADIUS, monkeyOrbitAngle)), glm::vec3(0.0, 1.0, 0.0)),
 			glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
 			
-		monkeyHierarchy.hMap["rotorAxle"].myLocalTransform.rotation = glm::rotate(monkeyHierarchy.hMap["rotorAxle"].myLocalTransform.rotation, -2*deltaTime, glm::vec3(0.0, 1.0, 0.0));
-		monkeyHierarchy.hMap["tailAxle"].myLocalTransform.rotation = glm::rotate(monkeyHierarchy.hMap["tailAxle"].myLocalTransform.rotation, 2 * deltaTime, glm::vec3(1.0, 0.0, 0.0));
+		monkeyHierarchy.hMap["rotorAxle"].myLocalTransform.rotation = glm::rotate(monkeyHierarchy.hMap["rotorAxle"].myLocalTransform.rotation, -5*deltaTime, glm::vec3(0.0, 1.0, 0.0));
+		monkeyHierarchy.hMap["tailAxle"].myLocalTransform.rotation = glm::rotate(monkeyHierarchy.hMap["tailAxle"].myLocalTransform.rotation, 5 * deltaTime, glm::vec3(1.0, 0.0, 0.0));
 		
 		floorTransform.position = floorPos;
 
@@ -183,13 +179,13 @@ int main() {
 		gBuffer->UseGBuffer();
 		gBuffer->FBShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		//drawScene(gBuffer->FBShader, MONKEY_SQUARE_COUNT);
-		drawScene(gBuffer->FBShader);
+		drawScene(gBuffer->FBShader, MONKEY_SQUARE_COUNT);
+		//drawScene(gBuffer->FBShader);
 
 		shadowBuffer->UseShadow(light);
 		glBindTexture(GL_TEXTURE_2D, brickTexture);
-		//drawScene(shadowBuffer->FBShader, MONKEY_SQUARE_COUNT);
-		drawScene(shadowBuffer->FBShader);
+		drawScene(shadowBuffer->FBShader, MONKEY_SQUARE_COUNT);
+		//drawScene(shadowBuffer->FBShader);
 		
 		
 		frameBuffer.UseDefault();
@@ -244,8 +240,6 @@ void drawMonkeyHierarchy(ew::Transform rootTransform, ew::Shader shader)
 	{
 		shader.setMat4("_Model", it->second.myGlobalTransform);
 		monkeyModel->draw();
-		/*std::cout << "Drawing node " << it->first << " at depth " << depth << std::endl;
-		depth++;*/
 		it++;
 	}
 	monkeyHierarchy.resetUpdated();
@@ -255,8 +249,6 @@ void drawScene(ew::Shader shader)
 {
 	shader.setMat4("_Model", floorTransform.modelMatrix());
 	planeMesh.draw();
-	//shader.setMat4("_Model", monkeyTransform.modelMatrix());
-	//monkeyModel->draw(); //Draws monkey model using current shader
 	ew::Transform mTrans = monkeyTransform;
 	mTrans.position += orbitOffset(MONKEY_FLIGHT_RADIUS, monkeyOrbitAngle);
 	drawMonkeyHierarchy(mTrans, shader);
@@ -267,27 +259,25 @@ void drawScene(ew::Shader shader, int count)
 	count = (count / 2) * DRAW_LOOP_OFFSET;
 	ew::Transform mTrans = monkeyTransform;
 	ew::Transform fTrans = floorTransform;
-	for (int i = -count; i < count; i += DRAW_LOOP_OFFSET)
+	fTrans.position = floorTransform.position - glm::vec3(count, 0, count);
+	mTrans.position = monkeyTransform.position - glm::vec3(count, 0, count) + orbitOffset(MONKEY_FLIGHT_RADIUS, monkeyOrbitAngle);
+	for (float i = -count; i < count; i += DRAW_LOOP_OFFSET)
 	{
-		mTrans.position.x += DRAW_LOOP_OFFSET;
-		fTrans.position.x = i;
 
-		for (int j = -count; j < count; j += DRAW_LOOP_OFFSET)
+		mTrans.position.x += DRAW_LOOP_OFFSET;
+		fTrans.position.x += DRAW_LOOP_OFFSET;
+
+		for (float j = -count; j < count; j += DRAW_LOOP_OFFSET)
 		{
 			mTrans.position.z += DRAW_LOOP_OFFSET;
-			fTrans.position.z = j;
+			fTrans.position.z += DRAW_LOOP_OFFSET;
 			shader.setMat4("_Model", fTrans.modelMatrix());
 			planeMesh.draw();
-			//shader.setMat4("_Model", mTrans.modelMatrix());
-			//monkeyModel->draw(); //Draws monkey model using current shader
-			//mTrans.position = orbit(mTrans.position, MONKEY_FLIGHT_RADIUS, monkeyOrbitAngle);
-			std::cout << "X = " << mTrans.position.x << " _ Y = " << mTrans.position.y << " _ Z = " << mTrans.position.z << std::endl;
 			drawMonkeyHierarchy(mTrans, shader);
-			//mTrans.position = glm::vec3(0, 0, 0);
 		}
+		mTrans.position.z = monkeyTransform.position.z - count + orbitOffset(MONKEY_FLIGHT_RADIUS, monkeyOrbitAngle).z;
+		fTrans.position.z = floorTransform.position.z - count;
 	}
-	//shader.setMat4("_Model", monkeyTransform.modelMatrix());
-	//monkeyModel->draw(); //Draws monkey model using current shader
 }
 
 void drawUI() {
@@ -465,20 +455,11 @@ void makeUBO(unsigned int& ubo, void* arrayAddress, unsigned int size, int bindi
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-glm::vec3 orbit(glm::vec3 center, float r, float angle)
-{
-	glm::vec3 newPos = center;
-	newPos.x += r * cos(glm::radians(angle));
-	newPos.z += r * sin(glm::radians(angle));
-	return newPos;
-}
-
 glm::vec3 orbitOffset(float r, float angle)
 {
 	glm::vec3 newPos;
 	newPos.x = r * cos(glm::radians(angle));
 	newPos.z = r * sin(glm::radians(angle));
 	newPos.y = 0;
-	std::cout << "Orbit angle = " << monkeyOrbitAngle << " X offset = " << newPos.x << " Z offset = " << newPos.z << std::endl;
 	return newPos;
 }

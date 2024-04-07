@@ -39,7 +39,7 @@ namespace wr {
 		unsigned int depthBuffer;
 		unsigned int width;
 		unsigned int height;
-		ew::Shader FBShader = ew::Shader("assets/BufferShader.vert", "assets/KernelShader.frag");
+		ew::Shader FBShader = ew::Shader("assets/BufferShader.vert", "assets/BufferShader.frag");
 		const GLenum drawBuffers[3] = 
 		{
 			GL_COLOR_ATTACHMENT0, 
